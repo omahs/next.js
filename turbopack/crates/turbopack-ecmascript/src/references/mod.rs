@@ -55,6 +55,7 @@ use swc_core::{
 use tracing::Instrument;
 use turbo_tasks::{RcStr, TryJoinIterExt, Upcast, Value, ValueToString, Vc};
 use turbo_tasks_fs::FileSystemPath;
+use turbo_tasks_hash::hash_xxh3_hash64;
 use turbopack_core::{
     compile_time_info::{
         CompileTimeInfo, DefineableNameSegment, FreeVarReference, FreeVarReferences,
@@ -458,7 +459,7 @@ pub(crate) async fn analyse_ecmascript_module_internal(
         module.failsafe_parse()
     };
 
-    let parsed = apply_transforms(parsed, transforms_after_split);
+    let parsed = apply_transforms(source, parsed, transforms_after_split);
 
     let ModuleTypeResult {
         module_type: specified_type,
@@ -1260,6 +1261,7 @@ pub(crate) async fn analyse_ecmascript_module_internal(
 
 #[turbo_tasks::function]
 async fn apply_transforms(
+    source: Vc<Box<dyn Source>>,
     parsed: Vc<ParseResult>,
     transforms: Vc<EcmascriptInputTransforms>,
 ) -> Result<Vc<ParseResult>> {
@@ -1276,6 +1278,11 @@ async fn apply_transforms(
     else {
         return Ok(parsed);
     };
+
+    // TODO: Optimize this
+    let fs_path_vc = source.ident().path();
+    let fs_path = &*fs_path_vc.await?;
+    let file_path_hash = hash_xxh3_hash64(&*source.ident().to_string().await?) as u128;
 
     let mut parsed_program = program.clone();
 
@@ -1301,7 +1308,6 @@ async fn apply_transforms(
     }
     .instrument(span)
     .await?;
-    drop(span);
 
     let eval_context = EvalContext::new(
         &parsed_program,
