@@ -10,7 +10,7 @@ use swc_core::{
             ExportAll, ExportNamedSpecifier, Id, Ident, ImportDecl, Module, ModuleDecl,
             ModuleExportName, ModuleItem, NamedExport, Program,
         },
-        codegen::{text_writer::JsWriter, Emitter},
+        codegen::{text_writer::JsWriter, to_code, Emitter},
     },
 };
 use turbo_tasks::{RcStr, ValueToString, Vc};
@@ -487,6 +487,16 @@ pub(super) async fn split(
                 modules,
                 star_reexports,
             } = dep_graph.split_module(&items);
+
+            eprintln!(
+                "# Program ({:?}):\n{}",
+                ident.to_string().await?,
+                to_code(&program)
+            );
+
+            for (idx, m) in modules.iter().enumerate() {
+                eprintln!("# Module #{idx}:\n{}", to_code(&m));
+            }
 
             assert_ne!(modules.len(), 0, "modules.len() == 0;\nModule: {module:?}",);
 
