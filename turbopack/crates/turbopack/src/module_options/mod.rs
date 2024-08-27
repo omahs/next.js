@@ -212,6 +212,8 @@ impl ModuleOptions {
             .collect(),
         );
 
+        let mut transforms_after_split = Vc::cell(vec![]);
+
         let mut rules = vec![
             ModuleRule::new_all(
                 ModuleRuleCondition::ResourcePathEndsWith(".json".to_string()),
@@ -224,6 +226,7 @@ impl ModuleOptions {
                 ]),
                 vec![ModuleRuleEffect::ModuleType(ModuleType::Ecmascript {
                     transforms: app_transforms,
+                    transforms_after_split,
                     options: ecmascript_options_vc,
                 })],
             ),
@@ -231,6 +234,7 @@ impl ModuleOptions {
                 ModuleRuleCondition::ResourcePathEndsWith(".mjs".to_string()),
                 vec![ModuleRuleEffect::ModuleType(ModuleType::Ecmascript {
                     transforms: app_transforms,
+                    transforms_after_split,
                     options: EcmascriptOptions {
                         specified_module_type: SpecifiedModuleType::EcmaScript,
                         ..ecmascript_options
@@ -242,6 +246,7 @@ impl ModuleOptions {
                 ModuleRuleCondition::ResourcePathEndsWith(".cjs".to_string()),
                 vec![ModuleRuleEffect::ModuleType(ModuleType::Ecmascript {
                     transforms: app_transforms,
+                    transforms_after_split,
                     options: EcmascriptOptions {
                         specified_module_type: SpecifiedModuleType::CommonJs,
                         ..ecmascript_options
@@ -253,6 +258,7 @@ impl ModuleOptions {
                 ModuleRuleCondition::ResourcePathEndsWith(".ts".to_string()),
                 vec![ModuleRuleEffect::ModuleType(ModuleType::Typescript {
                     transforms: ts_app_transforms,
+                    transforms_after_split,
                     tsx: false,
                     analyze_types: enable_types,
                     options: ecmascript_options_vc,
@@ -262,6 +268,7 @@ impl ModuleOptions {
                 ModuleRuleCondition::ResourcePathEndsWith(".tsx".to_string()),
                 vec![ModuleRuleEffect::ModuleType(ModuleType::Typescript {
                     transforms: ts_app_transforms,
+                    transforms_after_split,
                     tsx: true,
                     analyze_types: enable_types,
                     options: ecmascript_options_vc,
@@ -271,6 +278,7 @@ impl ModuleOptions {
                 ModuleRuleCondition::ResourcePathEndsWith(".mts".to_string()),
                 vec![ModuleRuleEffect::ModuleType(ModuleType::Typescript {
                     transforms: ts_app_transforms,
+                    transforms_after_split,
                     tsx: false,
                     analyze_types: enable_types,
                     options: EcmascriptOptions {
@@ -284,6 +292,7 @@ impl ModuleOptions {
                 ModuleRuleCondition::ResourcePathEndsWith(".mtsx".to_string()),
                 vec![ModuleRuleEffect::ModuleType(ModuleType::Typescript {
                     transforms: ts_app_transforms,
+                    transforms_after_split,
                     tsx: true,
                     analyze_types: enable_types,
                     options: EcmascriptOptions {
@@ -297,6 +306,7 @@ impl ModuleOptions {
                 ModuleRuleCondition::ResourcePathEndsWith(".cts".to_string()),
                 vec![ModuleRuleEffect::ModuleType(ModuleType::Typescript {
                     transforms: ts_app_transforms,
+                    transforms_after_split,
                     tsx: false,
                     analyze_types: enable_types,
                     options: EcmascriptOptions {
@@ -310,6 +320,7 @@ impl ModuleOptions {
                 ModuleRuleCondition::ResourcePathEndsWith(".ctsx".to_string()),
                 vec![ModuleRuleEffect::ModuleType(ModuleType::Typescript {
                     transforms: ts_app_transforms,
+                    transforms_after_split,
                     tsx: true,
                     analyze_types: enable_types,
                     options: EcmascriptOptions {
@@ -324,6 +335,7 @@ impl ModuleOptions {
                 vec![ModuleRuleEffect::ModuleType(
                     ModuleType::TypescriptDeclaration {
                         transforms: vendor_transforms,
+                        transforms_after_split,
                         options: ecmascript_options_vc,
                     },
                 )],
@@ -369,6 +381,7 @@ impl ModuleOptions {
                 ModuleRuleCondition::ResourcePathHasNoExtension,
                 vec![ModuleRuleEffect::ModuleType(ModuleType::Ecmascript {
                     transforms: vendor_transforms,
+                    transforms_after_split,
                     options: ecmascript_options_vc,
                 })],
             ),
