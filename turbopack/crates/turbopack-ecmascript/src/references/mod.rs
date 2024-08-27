@@ -36,6 +36,7 @@ use regex::Regex;
 use sourcemap::decode_data_url;
 use swc_core::{
     atoms::JsWord,
+    base::SwcComments,
     common::{
         comments::{CommentKind, Comments},
         errors::{DiagnosticId, Handler, HANDLER},
@@ -1278,8 +1279,9 @@ async fn apply_transforms(
 
     let mut parsed_program = program.clone();
 
+    let empty_comments = SwcComments::default();
     let transform_context = TransformContext {
-        comments: comments.clone(),
+        comments: &empty_comments,
         source_map: &source_map,
         top_level_mark: *top_level_mark,
         unresolved_mark: eval_context.unresolved_mark,
