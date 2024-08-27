@@ -110,16 +110,19 @@ async fn apply_module_type(
     Ok(ProcessResult::Module(match module_type {
         ModuleType::Ecmascript {
             transforms,
+            transforms_after_split,
             options,
         }
         | ModuleType::Typescript {
             transforms,
             tsx: _,
             analyze_types: _,
+            transforms_after_split,
             options,
         }
         | ModuleType::TypescriptDeclaration {
             transforms,
+            transforms_after_split,
             options,
         } => {
             let context_for_module = match module_type {
@@ -135,6 +138,7 @@ async fn apply_module_type(
                 source,
                 Vc::upcast(context_for_module),
                 *transforms,
+                *transforms_after_split,
                 *options,
                 module_asset_context.compile_time_info(),
             );
