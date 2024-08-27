@@ -55,6 +55,7 @@ pub async fn get_next_pages_transforms_rule(
         vec![ModuleRuleEffect::ExtendEcmascriptTransforms {
             prepend: Vc::cell(vec![]),
             append: Vc::cell(vec![strip_transform]),
+            append_after_split: Vc::cell(vec![]),
         }],
     ))
 }

@@ -20,6 +20,7 @@ pub fn get_next_shake_exports_rule(enable_mdx_rs: bool, ignore: Vec<String>) -> 
         vec![ModuleRuleEffect::ExtendEcmascriptTransforms {
             prepend: Vc::cell(vec![]),
             append: Vc::cell(vec![transformer]),
+            append_after_split: Vc::cell(vec![]),
         }],
     )
 }

@@ -34,6 +34,7 @@ pub async fn get_next_dynamic_transform_rule(
         vec![ModuleRuleEffect::ExtendEcmascriptTransforms {
             prepend: Vc::cell(vec![]),
             append: Vc::cell(vec![dynamic_transform]),
+            append_after_split: Vc::cell(vec![]),
         }],
     ))
 }

@@ -212,7 +212,7 @@ impl ModuleOptions {
             .collect(),
         );
 
-        let mut transforms_after_split = Vc::cell(vec![]);
+        let transforms_after_split = Vc::cell(vec![]);
 
         let mut rules = vec![
             ModuleRule::new_all(

@@ -28,7 +28,8 @@ pub fn get_server_actions_transform_rule(
         module_rule_match_js_no_url(enable_mdx_rs),
         vec![ModuleRuleEffect::ExtendEcmascriptTransforms {
             prepend: Vc::cell(vec![]),
-            append: Vc::cell(vec![transformer]),
+            append: Vc::cell(vec![]),
+            append_after_split: Vc::cell(vec![transformer]),
         }],
     )
 }

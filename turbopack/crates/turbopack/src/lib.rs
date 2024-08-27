@@ -534,7 +534,8 @@ async fn process_default_internal(
                                 options,
                             }) => Some(ModuleType::Typescript {
                                 transforms: prepend.extend(transforms).extend(*append),
-                                transforms_after_split,
+                                transforms_after_split: transforms_after_split
+                                    .extend(*append_after_split),
                                 tsx,
                                 analyze_types,
                                 options,

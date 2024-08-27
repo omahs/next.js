@@ -23,6 +23,7 @@ pub fn get_next_disallow_export_all_in_page_rule(
         vec![ModuleRuleEffect::ExtendEcmascriptTransforms {
             prepend: Vc::cell(vec![]),
             append: Vc::cell(vec![transformer]),
+            append_after_split: Vc::cell(vec![]),
         }],
     )
 }

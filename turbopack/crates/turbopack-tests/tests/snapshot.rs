@@ -259,6 +259,7 @@ async fn run_test(resource: RcStr) -> Result<Vc<FileSystemPath>> {
                 ) as _)),
             ]),
             append: Vc::cell(vec![]),
+            append_after_split: Vc::cell(vec![]),
         }],
     );
     let asset_context: Vc<Box<dyn AssetContext>> = Vc::upcast(ModuleAssetContext::new(

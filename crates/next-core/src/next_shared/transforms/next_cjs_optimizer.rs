@@ -54,6 +54,7 @@ pub fn get_next_cjs_optimizer_rule(enable_mdx_rs: bool) -> ModuleRule {
         vec![ModuleRuleEffect::ExtendEcmascriptTransforms {
             prepend: Vc::cell(vec![]),
             append: Vc::cell(vec![transformer]),
+            append_after_split: Vc::cell(vec![]),
         }],
     )
 }

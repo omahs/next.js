@@ -139,6 +139,10 @@ pub(crate) fn get_ecma_transform_rule(
 
     ModuleRule::new(
         module_rule_match_js_no_url(enable_mdx_rs),
-        vec![ModuleRuleEffect::ExtendEcmascriptTransforms { prepend, append }],
+        vec![ModuleRuleEffect::ExtendEcmascriptTransforms {
+            prepend,
+            append,
+            append_after_split: Vc::cell(vec![]),
+        }],
     )
 }
