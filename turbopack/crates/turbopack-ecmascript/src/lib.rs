@@ -246,6 +246,7 @@ pub struct EcmascriptModuleAsset {
     pub options: Vc<EcmascriptOptions>,
     pub compile_time_info: Vc<CompileTimeInfo>,
     pub inner_assets: Option<Vc<InnerAssets>>,
+    pub transforms_after_split: Vc<EcmascriptInputTransforms>,
     #[turbo_tasks(debug_ignore)]
     #[serde(skip)]
     last_successful_parse: turbo_tasks::State<Option<ReadRef<ParseResult>>>,
@@ -421,6 +422,7 @@ impl EcmascriptModuleAsset {
         asset_context: Vc<Box<dyn AssetContext>>,
         ty: Value<EcmascriptModuleAssetType>,
         transforms: Vc<EcmascriptInputTransforms>,
+        transforms_after_split: Vc<EcmascriptInputTransforms>,
         options: Vc<EcmascriptOptions>,
         compile_time_info: Vc<CompileTimeInfo>,
     ) -> Vc<Self> {
@@ -429,6 +431,7 @@ impl EcmascriptModuleAsset {
             asset_context,
             ty: ty.into_value(),
             transforms,
+            transforms_after_split,
             options,
             compile_time_info,
             inner_assets: None,
@@ -442,6 +445,7 @@ impl EcmascriptModuleAsset {
         asset_context: Vc<Box<dyn AssetContext>>,
         ty: Value<EcmascriptModuleAssetType>,
         transforms: Vc<EcmascriptInputTransforms>,
+        transforms_after_split: Vc<EcmascriptInputTransforms>,
         options: Vc<EcmascriptOptions>,
         compile_time_info: Vc<CompileTimeInfo>,
         inner_assets: Vc<InnerAssets>,
@@ -451,6 +455,7 @@ impl EcmascriptModuleAsset {
             asset_context,
             ty: ty.into_value(),
             transforms,
+            transforms_after_split,
             options,
             compile_time_info,
             inner_assets: Some(inner_assets),
