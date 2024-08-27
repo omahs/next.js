@@ -1261,7 +1261,7 @@ pub(crate) async fn analyse_ecmascript_module_internal(
 async fn apply_transforms(
     parsed: Vc<ParseResult>,
     transforms: Vc<EcmascriptInputTransforms>,
-) -> Vc<ParseResult> {
+) -> Result<Vc<ParseResult>> {
     let transforms = &*transforms.await?;
 
     let ParseResult::Ok {
@@ -1273,15 +1273,15 @@ async fn apply_transforms(
         top_level_mark,
     } = &*parsed.await?
     else {
-        return parsed;
+        return Ok(parsed);
     };
 
     let mut parsed_program = program.clone();
 
     let transform_context = TransformContext {
-        comments: &comments,
+        comments: comments.clone(),
         source_map: &source_map,
-        top_level_mark,
+        top_level_mark: *top_level_mark,
         unresolved_mark: eval_context.unresolved_mark,
         file_path_str: &fs_path.path,
         file_name_str: fs_path.file_name(),
