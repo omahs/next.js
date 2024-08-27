@@ -46,6 +46,7 @@ use swc_core::{
     },
     ecma::{
         ast::*,
+        transforms::base::helpers::{Helpers, HELPERS},
         visit::{
             fields::{AssignExprField, AssignTargetField, SimpleAssignTargetField},
             AstParentKind, AstParentNodeRef, VisitAstPath, VisitWithAstPath,
@@ -53,7 +54,7 @@ use swc_core::{
     },
 };
 use tracing::Instrument;
-use turbo_tasks::{RcStr, TryJoinIterExt, Upcast, Value, ValueToString, Vc};
+use turbo_tasks::{util::WrapFuture, RcStr, TryJoinIterExt, Upcast, Value, ValueToString, Vc};
 use turbo_tasks_fs::FileSystemPath;
 use turbo_tasks_hash::hash_xxh3_hash64;
 use turbopack_core::{
@@ -1279,52 +1280,69 @@ async fn apply_transforms(
         return Ok(parsed);
     };
 
+    let handler = Handler::with_emitter(
+        true,
+        false,
+        Box::new(IssueEmitter::new(
+            source,
+            source_map.clone(),
+            Some("Ecmascript file had an error".into()),
+        )),
+    );
+
     // TODO: Optimize this
     let fs_path_vc = source.ident().path();
     let fs_path = &*fs_path_vc.await?;
     let file_path_hash = hash_xxh3_hash64(&*source.ident().to_string().await?) as u128;
 
-    let mut parsed_program = program.clone();
+    WrapFuture::new(
+        async {
+            let mut parsed_program = program.clone();
 
-    let empty_comments = SwcComments::default();
-    let transform_context = TransformContext {
-        comments: &empty_comments,
-        source_map: &source_map,
-        top_level_mark: *top_level_mark,
-        unresolved_mark: eval_context.unresolved_mark,
-        file_path_str: &fs_path.path,
-        file_name_str: fs_path.file_name(),
-        file_name_hash: file_path_hash,
-        file_path: fs_path_vc,
-    };
-    let span = tracing::trace_span!("post_split_transforms");
-    async {
-        for transform in transforms.iter() {
-            transform
-                .apply(&mut parsed_program, &transform_context)
-                .await?;
-        }
-        anyhow::Ok(())
-    }
-    .instrument(span)
-    .await?;
+            let empty_comments = SwcComments::default();
+            let transform_context = TransformContext {
+                comments: &empty_comments,
+                source_map,
+                top_level_mark: *top_level_mark,
+                unresolved_mark: eval_context.unresolved_mark,
+                file_path_str: &fs_path.path,
+                file_name_str: fs_path.file_name(),
+                file_name_hash: file_path_hash,
+                file_path: fs_path_vc,
+            };
 
-    let eval_context = EvalContext::new(
-        &parsed_program,
-        eval_context.unresolved_mark,
-        *top_level_mark,
-        None,
-    );
+            let span = tracing::trace_span!("transforms");
+            for transform in transforms.iter() {
+                transform
+                    .apply(&mut parsed_program, &transform_context)
+                    .await?;
+            }
+            drop(span);
 
-    Ok(ParseResult::Ok {
-        program: parsed_program,
-        comments: comments.clone(),
-        eval_context,
-        globals: globals.clone(),
-        source_map: source_map.clone(),
-        top_level_mark: *top_level_mark,
-    }
-    .cell())
+            let eval_context = EvalContext::new(
+                &parsed_program,
+                eval_context.unresolved_mark,
+                *top_level_mark,
+                None,
+            );
+
+            Ok(ParseResult::Ok {
+                program: parsed_program,
+                comments: comments.clone(),
+                eval_context,
+                globals: globals.clone(),
+                source_map: source_map.clone(),
+                top_level_mark: *top_level_mark,
+            }
+            .cell())
+        },
+        |f, cx| {
+            GLOBALS.set(globals, || {
+                HANDLER.set(&handler, || HELPERS.set(&Helpers::new(true), || f.poll(cx)))
+            })
+        },
+    )
+    .await
 }
 
 fn handle_call_boxed<'a, G: Fn(Vec<Effect>) + Send + Sync + 'a>(
