@@ -138,7 +138,7 @@ use crate::{
     tree_shake::{find_turbopack_part_id_in_asserts, part_of_module, split},
     utils::{module_value_to_well_known_object, AstPathRange},
     EcmascriptInputTransforms, EcmascriptModuleAsset, EcmascriptParsable, SpecifiedModuleType,
-    TreeShakingMode,
+    TransformContext, TreeShakingMode,
 };
 
 #[derive(Clone)]
@@ -432,6 +432,7 @@ pub(crate) async fn analyse_ecmascript_module_internal(
     let source = raw_module.source;
     let ty = Value::new(raw_module.ty);
     let transforms = raw_module.transforms;
+    let transforms_after_split = raw_module.transforms_after_split;
     let options = raw_module.options;
     let options = options.await?;
     let import_externals = options.import_externals;
@@ -455,6 +456,8 @@ pub(crate) async fn analyse_ecmascript_module_internal(
     } else {
         module.failsafe_parse()
     };
+
+    let parsed = apply_transforms(parsed, transforms_after_split);
 
     let ModuleTypeResult {
         module_type: specified_type,
@@ -1252,6 +1255,68 @@ pub(crate) async fn analyse_ecmascript_module_internal(
             Some(TreeShakingMode::ReexportsOnly)
         ))
         .await
+}
+
+#[turbo_tasks::function]
+async fn apply_transforms(
+    parsed: Vc<ParseResult>,
+    transforms: Vc<EcmascriptInputTransforms>,
+) -> Vc<ParseResult> {
+    let transforms = &*transforms.await?;
+
+    let ParseResult::Ok {
+        program,
+        comments,
+        eval_context,
+        globals,
+        source_map,
+        top_level_mark,
+    } = &*parsed.await?
+    else {
+        return parsed;
+    };
+
+    let mut parsed_program = program.clone();
+
+    let transform_context = TransformContext {
+        comments: &comments,
+        source_map: &source_map,
+        top_level_mark,
+        unresolved_mark: eval_context.unresolved_mark,
+        file_path_str: &fs_path.path,
+        file_name_str: fs_path.file_name(),
+        file_name_hash: file_path_hash,
+        file_path: fs_path_vc,
+    };
+    let span = tracing::trace_span!("post_split_transforms");
+    async {
+        for transform in transforms.iter() {
+            transform
+                .apply(&mut parsed_program, &transform_context)
+                .await?;
+        }
+        anyhow::Ok(())
+    }
+    .instrument(span)
+    .await?;
+    drop(span);
+
+    let eval_context = EvalContext::new(
+        &parsed_program,
+        eval_context.unresolved_mark,
+        *top_level_mark,
+        None,
+    );
+
+    Ok(ParseResult::Ok {
+        program: parsed_program,
+        comments: comments.clone(),
+        eval_context,
+        globals: globals.clone(),
+        source_map: source_map.clone(),
+        top_level_mark: *top_level_mark,
+    }
+    .cell())
 }
 
 fn handle_call_boxed<'a, G: Fn(Vec<Effect>) + Send + Sync + 'a>(
