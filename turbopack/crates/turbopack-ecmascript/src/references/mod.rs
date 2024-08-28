@@ -138,6 +138,7 @@ use crate::{
         require_context::{RequireContextAssetReference, RequireContextMap},
         type_issue::SpecifiedModuleTypeIssue,
     },
+    swc_comments::ImmutableComments,
     tree_shake::{find_turbopack_part_id_in_asserts, part_of_module, split},
     utils::{module_value_to_well_known_object, AstPathRange},
     EcmascriptInputTransforms, EcmascriptModuleAsset, EcmascriptParsable, SpecifiedModuleType,
@@ -1280,6 +1281,14 @@ async fn apply_transforms(
         return Ok(parsed);
     };
 
+    let merged_comments = SwcComments::default();
+    for c in comments.leading.iter() {
+        merged_comments.leading.insert(*c.0, c.1.clone());
+    }
+    for c in comments.trailing.iter() {
+        merged_comments.trailing.insert(*c.0, c.1.clone());
+    }
+
     let handler = Handler::with_emitter(
         true,
         false,
@@ -1299,9 +1308,8 @@ async fn apply_transforms(
         async {
             let mut parsed_program = program.clone();
 
-            let empty_comments = SwcComments::default();
             let transform_context = TransformContext {
-                comments: &empty_comments,
+                comments: &merged_comments,
                 source_map,
                 top_level_mark: *top_level_mark,
                 unresolved_mark: eval_context.unresolved_mark,
@@ -1318,6 +1326,8 @@ async fn apply_transforms(
                     .await?;
             }
             drop(span);
+
+            let comments = Arc::new(ImmutableComments::new(merged_comments));
 
             let eval_context = EvalContext::new(
                 &parsed_program,
