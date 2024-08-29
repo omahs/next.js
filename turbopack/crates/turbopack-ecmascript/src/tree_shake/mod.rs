@@ -450,13 +450,11 @@ pub(super) async fn split(
     source: Vc<Box<dyn Source>>,
     parsed: Vc<ParseResult>,
 ) -> Result<Vc<SplitResult>> {
-    if cfg!(debug_assertions) {
-        debug_assert_eq!(
-            ident.await?.part,
-            None,
-            "{} is already a part",
-            ident.to_string().await?
-        );
+    if ident.await?.part.is_some() {
+        return Ok(SplitResult::Failed {
+            parse_result: parsed,
+        }
+        .cell());
     }
 
     let parse_result = parsed.await?;
