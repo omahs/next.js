@@ -42,10 +42,11 @@ impl EcmascriptParsable for EcmascriptModulePartAsset {
         part: Option<Vc<ModulePart>>,
     ) -> Result<Vc<ParseResult>> {
         let this = self.await?;
+        let part = part.unwrap_or(this.part);
 
-        let parsed = this.full_module.failsafe_parse(Some(this.part));
+        let parsed = this.full_module.failsafe_parse(Some(part));
         let split_data = split(this.full_module.ident(), this.full_module.source(), parsed);
-        Ok(part_of_module(split_data, this.part))
+        Ok(part_of_module(split_data, part))
     }
 
     #[turbo_tasks::function]
