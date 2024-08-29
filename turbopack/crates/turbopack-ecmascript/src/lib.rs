@@ -1025,7 +1025,7 @@ async fn apply_transforms(
                 eval_context.unresolved_mark,
                 *top_level_mark,
                 Some(&comments),
-                None,
+                Some(source),
             );
 
             Ok(ParseResult::Ok {
