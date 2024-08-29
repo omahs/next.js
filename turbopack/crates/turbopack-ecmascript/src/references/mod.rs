@@ -1306,7 +1306,7 @@ async fn apply_transforms(
 
     WrapFuture::new(
         async {
-            let mut parsed_program = program.clone();
+            let mut program = program.clone();
 
             let transform_context = TransformContext {
                 comments: &merged_comments,
@@ -1321,23 +1321,21 @@ async fn apply_transforms(
 
             let span = tracing::trace_span!("transforms");
             for transform in transforms.iter() {
-                transform
-                    .apply(&mut parsed_program, &transform_context)
-                    .await?;
+                transform.apply(&mut program, &transform_context).await?;
             }
             drop(span);
 
             let comments = Arc::new(ImmutableComments::new(merged_comments));
 
             let eval_context = EvalContext::new(
-                &parsed_program,
+                &program,
                 eval_context.unresolved_mark,
                 *top_level_mark,
                 None,
             );
 
             Ok(ParseResult::Ok {
-                program: parsed_program,
+                program,
                 comments: comments.clone(),
                 eval_context,
                 globals: globals.clone(),
