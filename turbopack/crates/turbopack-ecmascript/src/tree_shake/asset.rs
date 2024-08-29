@@ -37,17 +37,21 @@ pub struct EcmascriptModulePartAsset {
 #[turbo_tasks::value_impl]
 impl EcmascriptParsable for EcmascriptModulePartAsset {
     #[turbo_tasks::function]
-    async fn failsafe_parse(self: Vc<Self>) -> Result<Vc<ParseResult>> {
+    async fn failsafe_parse(
+        self: Vc<Self>,
+        part: Option<Vc<ModulePart>>,
+    ) -> Result<Vc<ParseResult>> {
         let this = self.await?;
 
-        let parsed = this.full_module.failsafe_parse();
+        let parsed = this.full_module.failsafe_parse(Some(this.part));
         let split_data = split(this.full_module.ident(), this.full_module.source(), parsed);
         Ok(part_of_module(split_data, this.part))
     }
 
     #[turbo_tasks::function]
     async fn parse_original(self: Vc<Self>) -> Result<Vc<ParseResult>> {
-        Ok(self.await?.full_module.parse_original())
+        let this = self.await?;
+        Ok(this.full_module.parse_original())
     }
 
     #[turbo_tasks::function]

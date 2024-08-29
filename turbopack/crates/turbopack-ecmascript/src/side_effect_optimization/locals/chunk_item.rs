@@ -39,7 +39,7 @@ impl EcmascriptChunkItem for EcmascriptModuleLocalsChunkItem {
         let chunking_context = self.chunking_context;
         let exports = self.module.get_exports();
         let original_module = module.module;
-        let parsed = original_module.parse().resolve().await?;
+        let parsed = original_module.parse(None).resolve().await?;
 
         let analyze_result = original_module.analyze().await?;
         let async_module_options = analyze_result

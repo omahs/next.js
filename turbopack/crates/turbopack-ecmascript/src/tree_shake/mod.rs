@@ -437,7 +437,11 @@ impl PartialEq for SplitResult {
 
 #[turbo_tasks::function]
 pub(super) async fn split_module(asset: Vc<EcmascriptModuleAsset>) -> Result<Vc<SplitResult>> {
-    Ok(split(asset.source().ident(), asset.source(), asset.parse()))
+    Ok(split(
+        asset.source().ident(),
+        asset.source(),
+        asset.parse(None),
+    ))
 }
 
 #[turbo_tasks::function]
@@ -549,7 +553,7 @@ pub(super) async fn split(
 }
 
 #[turbo_tasks::function]
-pub(super) async fn part_of_module(
+pub(crate) async fn part_of_module(
     split_data: Vc<SplitResult>,
     part: Vc<ModulePart>,
 ) -> Result<Vc<ParseResult>> {

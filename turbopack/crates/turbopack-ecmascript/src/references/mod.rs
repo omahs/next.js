@@ -36,7 +36,6 @@ use regex::Regex;
 use sourcemap::decode_data_url;
 use swc_core::{
     atoms::JsWord,
-    base::SwcComments,
     common::{
         comments::{CommentKind, Comments},
         errors::{DiagnosticId, Handler, HANDLER},
@@ -46,7 +45,6 @@ use swc_core::{
     },
     ecma::{
         ast::*,
-        transforms::base::helpers::{Helpers, HELPERS},
         visit::{
             fields::{AssignExprField, AssignTargetField, SimpleAssignTargetField},
             AstParentKind, AstParentNodeRef, VisitAstPath, VisitWithAstPath,
@@ -54,9 +52,8 @@ use swc_core::{
     },
 };
 use tracing::Instrument;
-use turbo_tasks::{util::WrapFuture, RcStr, TryJoinIterExt, Upcast, Value, ValueToString, Vc};
+use turbo_tasks::{RcStr, TryJoinIterExt, Upcast, Value, ValueToString, Vc};
 use turbo_tasks_fs::FileSystemPath;
-use turbo_tasks_hash::hash_xxh3_hash64;
 use turbopack_core::{
     compile_time_info::{
         CompileTimeInfo, DefineableNameSegment, FreeVarReference, FreeVarReferences,
@@ -128,7 +125,7 @@ use crate::{
     },
     chunk::EcmascriptExports,
     code_gen::{CodeGen, CodeGenerateable, CodeGenerateableWithAsyncModuleInfo, CodeGenerateables},
-    magic_identifier, parse,
+    magic_identifier,
     references::{
         async_module::{AsyncModule, OptionAsyncModule},
         cjs::{CjsRequireAssetReference, CjsRequireCacheAccess, CjsRequireResolveAssetReference},
@@ -138,11 +135,10 @@ use crate::{
         require_context::{RequireContextAssetReference, RequireContextMap},
         type_issue::SpecifiedModuleTypeIssue,
     },
-    swc_comments::ImmutableComments,
-    tree_shake::{find_turbopack_part_id_in_asserts, part_of_module, split},
+    tree_shake::find_turbopack_part_id_in_asserts,
     utils::{module_value_to_well_known_object, AstPathRange},
     EcmascriptInputTransforms, EcmascriptModuleAsset, EcmascriptParsable, SpecifiedModuleType,
-    TransformContext, TreeShakingMode,
+    TreeShakingMode,
 };
 
 #[derive(Clone)]
@@ -436,7 +432,6 @@ pub(crate) async fn analyse_ecmascript_module_internal(
     let source = raw_module.source;
     let ty = Value::new(raw_module.ty);
     let transforms = raw_module.transforms;
-    let transforms_after_split = raw_module.transforms_after_split;
     let options = raw_module.options;
     let options = options.await?;
     let import_externals = options.import_externals;
@@ -453,15 +448,7 @@ pub(crate) async fn analyse_ecmascript_module_internal(
         EcmascriptModuleAssetType::Ecmascript => false,
     };
 
-    let parsed = if let Some(part) = part {
-        let parsed = parse(source, ty, transforms);
-        let split_data = split(source.ident(), source, parsed);
-        part_of_module(split_data, part)
-    } else {
-        module.failsafe_parse()
-    };
-
-    let parsed = apply_transforms(source, parsed, transforms_after_split);
+    let parsed = module.failsafe_parse(part);
 
     let ModuleTypeResult {
         module_type: specified_type,
@@ -1259,98 +1246,6 @@ pub(crate) async fn analyse_ecmascript_module_internal(
             Some(TreeShakingMode::ReexportsOnly)
         ))
         .await
-}
-
-#[turbo_tasks::function]
-async fn apply_transforms(
-    source: Vc<Box<dyn Source>>,
-    parsed: Vc<ParseResult>,
-    transforms: Vc<EcmascriptInputTransforms>,
-) -> Result<Vc<ParseResult>> {
-    let transforms = &*transforms.await?;
-
-    let ParseResult::Ok {
-        program,
-        comments,
-        eval_context,
-        globals,
-        source_map,
-        top_level_mark,
-    } = &*parsed.await?
-    else {
-        return Ok(parsed);
-    };
-
-    let merged_comments = SwcComments::default();
-    for c in comments.leading.iter() {
-        merged_comments.leading.insert(*c.0, c.1.clone());
-    }
-    for c in comments.trailing.iter() {
-        merged_comments.trailing.insert(*c.0, c.1.clone());
-    }
-
-    let handler = Handler::with_emitter(
-        true,
-        false,
-        Box::new(IssueEmitter::new(
-            source,
-            source_map.clone(),
-            Some("Ecmascript file had an error".into()),
-        )),
-    );
-
-    // TODO: Optimize this
-    let fs_path_vc = source.ident().path();
-    let fs_path = &*fs_path_vc.await?;
-    let file_path_hash = hash_xxh3_hash64(&*source.ident().to_string().await?) as u128;
-
-    WrapFuture::new(
-        async {
-            let mut program = program.clone();
-
-            let transform_context = TransformContext {
-                comments: &merged_comments,
-                source_map,
-                top_level_mark: *top_level_mark,
-                unresolved_mark: eval_context.unresolved_mark,
-                file_path_str: &fs_path.path,
-                file_name_str: fs_path.file_name(),
-                file_name_hash: file_path_hash,
-                file_path: fs_path_vc,
-            };
-
-            let span = tracing::trace_span!("transforms");
-            for transform in transforms.iter() {
-                transform.apply(&mut program, &transform_context).await?;
-            }
-            drop(span);
-
-            let comments = Arc::new(ImmutableComments::new(merged_comments));
-
-            let eval_context = EvalContext::new(
-                &program,
-                eval_context.unresolved_mark,
-                *top_level_mark,
-                None,
-            );
-
-            Ok(ParseResult::Ok {
-                program,
-                comments: comments.clone(),
-                eval_context,
-                globals: globals.clone(),
-                source_map: source_map.clone(),
-                top_level_mark: *top_level_mark,
-            }
-            .cell())
-        },
-        |f, cx| {
-            GLOBALS.set(globals, || {
-                HANDLER.set(&handler, || HELPERS.set(&Helpers::new(true), || f.poll(cx)))
-            })
-        },
-    )
-    .await
 }
 
 fn handle_call_boxed<'a, G: Fn(Vec<Effect>) + Send + Sync + 'a>(
