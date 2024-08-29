@@ -13,8 +13,7 @@ use turbopack_core::{
 };
 
 use super::{
-    chunk_item::EcmascriptModulePartChunkItem, get_part_id, part_of_module, split, split_module,
-    Key, SplitResult,
+    chunk_item::EcmascriptModulePartChunkItem, get_part_id, split_module, Key, SplitResult,
 };
 use crate::{
     chunk::{EcmascriptChunkPlaceable, EcmascriptExports},
@@ -44,9 +43,7 @@ impl EcmascriptParsable for EcmascriptModulePartAsset {
         let this = self.await?;
         let part = part.unwrap_or(this.part);
 
-        let parsed = this.full_module.failsafe_parse(Some(part));
-        let split_data = split(this.full_module.ident(), this.full_module.source(), parsed);
-        Ok(part_of_module(split_data, part))
+        Ok(this.full_module.failsafe_parse(Some(part)))
     }
 
     #[turbo_tasks::function]
