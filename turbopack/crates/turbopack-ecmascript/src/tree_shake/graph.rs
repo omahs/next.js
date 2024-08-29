@@ -241,7 +241,11 @@ impl DepGraph {
     /// a usage side, `import` and `export` will be added.
     ///
     /// Note: ESM imports are immutable, but we do not handle it.
-    pub(super) fn split_module(&self, data: &FxHashMap<ItemId, ItemData>) -> SplitModuleResult {
+    pub(super) fn split_module(
+        &self,
+        directives: &[ModuleItem],
+        data: &FxHashMap<ItemId, ItemData>,
+    ) -> SplitModuleResult {
         let groups = self.finalize();
         let mut exports = FxHashMap::default();
         let mut part_deps = FxHashMap::<_, Vec<_>>::default();
@@ -279,7 +283,7 @@ impl DepGraph {
         for (ix, group) in groups.graph_ix.iter().enumerate() {
             let mut chunk = Module {
                 span: DUMMY_SP,
-                body: vec![],
+                body: directives.to_vec(),
                 shebang: None,
             };
 

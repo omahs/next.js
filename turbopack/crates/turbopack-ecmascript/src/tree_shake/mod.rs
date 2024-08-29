@@ -7,8 +7,8 @@ use swc_core::{
     common::{util::take::Take, SyntaxContext, DUMMY_SP, GLOBALS},
     ecma::{
         ast::{
-            ExportAll, ExportNamedSpecifier, Id, Ident, ImportDecl, Module, ModuleDecl,
-            ModuleExportName, ModuleItem, NamedExport, Program,
+            ExportAll, ExportNamedSpecifier, Expr, ExprStmt, Id, Ident, ImportDecl, Lit, Module,
+            ModuleDecl, ModuleExportName, ModuleItem, NamedExport, Program, Stmt,
         },
         codegen::{text_writer::JsWriter, to_code, Emitter},
     },
@@ -475,6 +475,21 @@ pub(super) async fn split(
                 Program::Script(..) => unreachable!("CJS is already handled"),
             };
 
+            let directives = module
+                .body
+                .iter()
+                .take_while(|item| {
+                    matches!(
+                        item,
+                        ModuleItem::Stmt(Stmt::Expr(ExprStmt {
+                            expr: box Expr::Lit(Lit::Str(..)),
+                            ..
+                        }))
+                    )
+                })
+                .cloned()
+                .collect::<Vec<_>>();
+
             let (mut dep_graph, items) = GLOBALS.set(globals, || {
                 Analyzer::analyze(
                     module,
@@ -490,7 +505,7 @@ pub(super) async fn split(
                 part_deps,
                 modules,
                 star_reexports,
-            } = dep_graph.split_module(&items);
+            } = dep_graph.split_module(&directives, &items);
 
             eprintln!(
                 "# Program ({}):\n{}",
