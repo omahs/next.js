@@ -475,6 +475,7 @@ pub(super) async fn split(
                 Program::Script(..) => unreachable!("CJS is already handled"),
             };
 
+            // We copy directives like `use client` or `use server` to each module
             let directives = module
                 .body
                 .iter()
