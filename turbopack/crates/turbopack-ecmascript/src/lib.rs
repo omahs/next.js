@@ -206,7 +206,7 @@ pub struct EcmascriptModuleAssetBuilder {
     asset_context: Vc<Box<dyn AssetContext>>,
     ty: EcmascriptModuleAssetType,
     transforms: Vc<EcmascriptInputTransforms>,
-    transforms_after_split: Vc<EcmascriptInputTransforms>,
+    fragment_transforms: Vc<EcmascriptInputTransforms>,
     options: Vc<EcmascriptOptions>,
     compile_time_info: Vc<CompileTimeInfo>,
     inner_assets: Option<Vc<InnerAssets>>,
@@ -230,7 +230,7 @@ impl EcmascriptModuleAssetBuilder {
                 self.asset_context,
                 Value::new(self.ty),
                 self.transforms,
-                self.transforms_after_split,
+                self.fragment_transforms,
                 self.options,
                 self.compile_time_info,
                 inner_assets,
@@ -241,7 +241,7 @@ impl EcmascriptModuleAssetBuilder {
                 self.asset_context,
                 Value::new(self.ty),
                 self.transforms,
-                self.transforms_after_split,
+                self.fragment_transforms,
                 self.options,
                 self.compile_time_info,
             )
@@ -264,7 +264,7 @@ pub struct EcmascriptModuleAsset {
     pub options: Vc<EcmascriptOptions>,
     pub compile_time_info: Vc<CompileTimeInfo>,
     pub inner_assets: Option<Vc<InnerAssets>>,
-    pub transforms_after_split: Vc<EcmascriptInputTransforms>,
+    pub fragment_transforms: Vc<EcmascriptInputTransforms>,
     #[turbo_tasks(debug_ignore)]
     #[serde(skip)]
     last_successful_parse: turbo_tasks::State<Option<ReadRef<ParseResult>>>,
@@ -313,7 +313,7 @@ impl EcmascriptModuleAsset {
         source: Vc<Box<dyn Source>>,
         asset_context: Vc<Box<dyn AssetContext>>,
         transforms: Vc<EcmascriptInputTransforms>,
-        transforms_after_split: Vc<EcmascriptInputTransforms>,
+        fragment_transforms: Vc<EcmascriptInputTransforms>,
         options: Vc<EcmascriptOptions>,
         compile_time_info: Vc<CompileTimeInfo>,
     ) -> EcmascriptModuleAssetBuilder {
@@ -322,7 +322,7 @@ impl EcmascriptModuleAsset {
             asset_context,
             ty: EcmascriptModuleAssetType::Ecmascript,
             transforms,
-            transforms_after_split,
+            fragment_transforms,
             options,
             compile_time_info,
             inner_assets: None,
@@ -450,7 +450,7 @@ impl EcmascriptModuleAsset {
         asset_context: Vc<Box<dyn AssetContext>>,
         ty: Value<EcmascriptModuleAssetType>,
         transforms: Vc<EcmascriptInputTransforms>,
-        transforms_after_split: Vc<EcmascriptInputTransforms>,
+        fragment_transforms: Vc<EcmascriptInputTransforms>,
         options: Vc<EcmascriptOptions>,
         compile_time_info: Vc<CompileTimeInfo>,
     ) -> Vc<Self> {
@@ -459,7 +459,7 @@ impl EcmascriptModuleAsset {
             asset_context,
             ty: ty.into_value(),
             transforms,
-            transforms_after_split,
+            fragment_transforms,
             options,
             compile_time_info,
             inner_assets: None,
@@ -473,7 +473,7 @@ impl EcmascriptModuleAsset {
         asset_context: Vc<Box<dyn AssetContext>>,
         ty: Value<EcmascriptModuleAssetType>,
         transforms: Vc<EcmascriptInputTransforms>,
-        transforms_after_split: Vc<EcmascriptInputTransforms>,
+        fragment_transforms: Vc<EcmascriptInputTransforms>,
         options: Vc<EcmascriptOptions>,
         compile_time_info: Vc<CompileTimeInfo>,
         inner_assets: Vc<InnerAssets>,
@@ -483,7 +483,7 @@ impl EcmascriptModuleAsset {
             asset_context,
             ty: ty.into_value(),
             transforms,
-            transforms_after_split,
+            fragment_transforms,
             options,
             compile_time_info,
             inner_assets: Some(inner_assets),
@@ -512,7 +512,7 @@ impl EcmascriptModuleAsset {
             parsed
         };
 
-        apply_transforms(self.source, parsed, self.transforms_after_split)
+        apply_transforms(self.source, parsed, self.fragment_transforms)
     }
 
     #[turbo_tasks::function]

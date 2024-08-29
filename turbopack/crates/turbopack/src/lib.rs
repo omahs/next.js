@@ -110,19 +110,19 @@ async fn apply_module_type(
     Ok(ProcessResult::Module(match module_type {
         ModuleType::Ecmascript {
             transforms,
-            transforms_after_split,
+            fragment_transforms,
             options,
         }
         | ModuleType::Typescript {
             transforms,
             tsx: _,
             analyze_types: _,
-            transforms_after_split,
+            fragment_transforms,
             options,
         }
         | ModuleType::TypescriptDeclaration {
             transforms,
-            transforms_after_split,
+            fragment_transforms,
             options,
         } => {
             let context_for_module = match module_type {
@@ -138,7 +138,7 @@ async fn apply_module_type(
                 source,
                 Vc::upcast(context_for_module),
                 *transforms,
-                *transforms_after_split,
+                *fragment_transforms,
                 *options,
                 module_asset_context.compile_time_info(),
             );
@@ -518,23 +518,23 @@ async fn process_default_internal(
                         current_module_type = match current_module_type {
                             Some(ModuleType::Ecmascript {
                                 transforms,
-                                transforms_after_split,
+                                fragment_transforms,
                                 options,
                             }) => Some(ModuleType::Ecmascript {
                                 transforms: prepend.extend(transforms).extend(*append),
-                                transforms_after_split: transforms_after_split
+                                fragment_transforms: fragment_transforms
                                     .extend(*append_after_split),
                                 options,
                             }),
                             Some(ModuleType::Typescript {
                                 transforms,
-                                transforms_after_split,
+                                fragment_transforms,
                                 tsx,
                                 analyze_types,
                                 options,
                             }) => Some(ModuleType::Typescript {
                                 transforms: prepend.extend(transforms).extend(*append),
-                                transforms_after_split: transforms_after_split
+                                fragment_transforms: fragment_transforms
                                     .extend(*append_after_split),
                                 tsx,
                                 analyze_types,
