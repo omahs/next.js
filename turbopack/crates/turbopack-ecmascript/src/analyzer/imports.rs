@@ -289,17 +289,10 @@ impl Visit for Analyzer<'_> {
             );
         }
 
-        if let Some(symbol) = &internal_symbol {
-            self.ensure_reference(
-                import.span,
-                import.src.value.clone(),
-                symbol.clone(),
-                annotations.clone(),
-            );
-        }
-
         for s in &import.specifiers {
-            let symbol = get_import_symbol_from_import(s);
+            let symbol = internal_symbol
+                .clone()
+                .unwrap_or_else(|| get_import_symbol_from_import(s));
             let i = self.ensure_reference(
                 import.span,
                 import.src.value.clone(),
@@ -326,6 +319,17 @@ impl Visit for Analyzer<'_> {
             };
 
             self.data.imports.insert(local, (i, orig_sym));
+        }
+
+        if import.specifiers.is_empty() {
+            if let Some(internal_symbol) = internal_symbol {
+                self.ensure_reference(
+                    import.span,
+                    import.src.value.clone(),
+                    internal_symbol,
+                    annotations,
+                );
+            }
         }
     }
 
