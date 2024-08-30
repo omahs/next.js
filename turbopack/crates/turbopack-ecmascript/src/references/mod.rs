@@ -135,7 +135,7 @@ use crate::{
         require_context::{RequireContextAssetReference, RequireContextMap},
         type_issue::SpecifiedModuleTypeIssue,
     },
-    tree_shake::{find_turbopack_part_id_in_asserts, TURBOPACK_PART_IMPORT_SOURCE},
+    tree_shake::find_turbopack_part_id_in_asserts,
     utils::{module_value_to_well_known_object, AstPathRange},
     EcmascriptInputTransforms, EcmascriptModuleAsset, EcmascriptParsable, SpecifiedModuleType,
     TreeShakingMode,
@@ -2685,10 +2685,7 @@ impl<'a> VisitAstPath for ModuleReferencesVisitor<'a> {
             .map(find_turbopack_part_id_in_asserts)
             .is_some();
 
-        if match &export.src {
-            None => true,
-            Some(src) => src.value == TURBOPACK_PART_IMPORT_SOURCE,
-        } {
+        if export.src.is_none() {
             for spec in export.specifiers.iter() {
                 fn to_string(name: &ModuleExportName) -> &JsWord {
                     name.atom()
