@@ -2685,7 +2685,10 @@ impl<'a> VisitAstPath for ModuleReferencesVisitor<'a> {
             .map(find_turbopack_part_id_in_asserts)
             .is_some();
 
-        if export.src.is_none() {
+        if match &export.src {
+            None => true,
+            Some(src) => src.value == "__TURBOPACK_PART__",
+        } {
             for spec in export.specifiers.iter() {
                 fn to_string(name: &ModuleExportName) -> &JsWord {
                     name.atom()
