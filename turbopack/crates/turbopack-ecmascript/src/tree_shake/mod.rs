@@ -10,7 +10,7 @@ use swc_core::{
             ExportAll, ExportNamedSpecifier, Expr, ExprStmt, Id, Ident, ImportDecl, Lit, Module,
             ModuleDecl, ModuleExportName, ModuleItem, NamedExport, Program, Stmt,
         },
-        codegen::{text_writer::JsWriter, to_code, Emitter},
+        codegen::{text_writer::JsWriter, Emitter},
     },
 };
 use turbo_tasks::{RcStr, ValueToString, Vc};
