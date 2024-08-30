@@ -323,11 +323,21 @@ impl DepGraph {
 
                             let s = ExportSpecifier::Named(ExportNamedSpecifier {
                                 span: DUMMY_SP,
-                                orig: ModuleExportName::Ident(Ident::new(
-                                    local.0.clone(),
-                                    DUMMY_SP,
-                                    local.1,
-                                )),
+                                orig: if export == "default" {
+                                    // references/mod.rs makes some assumptions about default
+                                    // exports.
+                                    ModuleExportName::Ident(Ident::new(
+                                        "default".into(),
+                                        DUMMY_SP,
+                                        Default::default(),
+                                    ))
+                                } else {
+                                    ModuleExportName::Ident(Ident::new(
+                                        local.0.clone(),
+                                        DUMMY_SP,
+                                        local.1,
+                                    ))
+                                },
                                 exported: Some(ModuleExportName::Ident(Ident::new(
                                     export.clone(),
                                     DUMMY_SP,
