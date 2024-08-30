@@ -4,8 +4,8 @@ use swc_core::{
     common::Span,
     ecma::{
         ast::{
-            ComputedPropName, Expr, Ident, KeyValueProp, Lit, MemberExpr, MemberProp, Number, Prop,
-            PropName, SeqExpr, SimpleAssignTarget, Str,
+            ComputedPropName, Expr, Ident, KeyValueProp, Lit, MemberExpr, MemberProp,
+            ModuleExportName, Number, Prop, PropName, SeqExpr, SimpleAssignTarget, Str,
         },
         visit::{
             fields::{CalleeField, PropField},
@@ -135,6 +135,24 @@ impl EsmBinding {
                         }));
                         break;
                     }
+                }
+                Some(swc_core::ecma::visit::AstParentKind::ModuleExportName(
+                    swc_core::ecma::visit::fields::ModuleExportNameField::Ident,
+                )) => {
+                    ast_path.pop();
+
+                    visitors.push(
+                        create_visitor!(exact ast_path, visit_mut_module_export_name(l: &mut ModuleExportName) {
+                            if let Some(ident) = imported_module.as_deref() {
+                                use swc_core::common::Spanned;
+                                *l = match make_expr(ident, item.export.as_deref(), l.span(), false) {
+                                    Expr::Ident(ident) => ModuleExportName::Ident(ident.into()),
+                                    Expr::Member(member) => todo!("MemberExpr"),
+                                    _ => unreachable!(),
+                                };
+                            }
+                        }));
+                    break;
                 }
                 Some(_) => {
                     ast_path.pop();

@@ -1741,6 +1741,10 @@ impl VisitAstPath for Analyzer<'_> {
             ast_path.last(),
             Some(AstParentNodeRef::Expr(_, ExprField::Ident))
                 | Some(AstParentNodeRef::Prop(_, PropField::Shorthand))
+                | Some(AstParentNodeRef::ModuleExportName(
+                    _,
+                    ModuleExportNameField::Ident
+                ))
         ) || matches!(
             ast_path.get(ast_path.len() - 2),
             Some(AstParentNodeRef::SimpleAssignTarget(
