@@ -515,15 +515,15 @@ pub(super) async fn split(
                 star_reexports,
             } = dep_graph.split_module(&directives, &items);
 
-            eprintln!(
-                "# Program ({}):\n{}",
-                ident.to_string().await?,
-                to_code(&program)
-            );
+            // eprintln!(
+            //     "# Program ({}):\n{}",
+            //     ident.to_string().await?,
+            //     to_code(&program)
+            // );
 
-            for (idx, module) in modules.iter().enumerate() {
-                eprintln!("# Module #{idx}:\n{}", to_code(&module));
-            }
+            // for (idx, module) in modules.iter().enumerate() {
+            //     eprintln!("# Module #{idx}:\n{}", to_code(&module));
+            // }
 
             assert_ne!(modules.len(), 0, "modules.len() == 0;\nModule: {module:?}",);
 
