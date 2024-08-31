@@ -41,9 +41,8 @@ impl EcmascriptParsable for EcmascriptModulePartAsset {
         part: Option<Vc<ModulePart>>,
     ) -> Result<Vc<ParseResult>> {
         let this = self.await?;
-        let part = part.unwrap_or(this.part);
 
-        Ok(this.full_module.failsafe_parse(Some(part)))
+        Ok(this.full_module.failsafe_parse(Some(this.part)))
     }
 
     #[turbo_tasks::function]
