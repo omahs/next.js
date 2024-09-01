@@ -20,7 +20,7 @@ pub(crate) use self::graph::{
     create_turbopack_part_id_assert, find_turbopack_part_id_in_asserts, PartId,
 };
 use self::graph::{DepGraph, ItemData, ItemId, ItemIdGroupKind, Mode, SplitModuleResult};
-use crate::{analyzer::graph::EvalContext, parse::ParseResult, EcmascriptModuleAsset};
+use crate::{analyzer::graph::EvalContext, parse::ParseResult};
 
 pub mod asset;
 pub mod chunk_item;
@@ -433,16 +433,6 @@ impl PartialEq for SplitResult {
             _ => core::mem::discriminant(self) == core::mem::discriminant(other),
         }
     }
-}
-
-#[turbo_tasks::function]
-pub(super) async fn split_module(asset: Vc<EcmascriptModuleAsset>) -> Result<Vc<SplitResult>> {
-    Ok(split(
-        asset.source().ident(),
-        asset.source(),
-        asset.parse(None),
-        asset.options().await?.special_exports,
-    ))
 }
 
 #[turbo_tasks::function]

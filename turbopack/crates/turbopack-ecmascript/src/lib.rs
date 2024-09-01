@@ -66,7 +66,7 @@ pub use transform::{
     CustomTransformer, EcmascriptInputTransform, EcmascriptInputTransforms, OptionTransformPlugin,
     TransformContext, TransformPlugin, UnsupportedServerActionIssue,
 };
-use tree_shake::{part_of_module, split};
+use tree_shake::{part_of_module, split, SplitResult};
 use turbo_tasks::{
     trace::TraceRawVcs, util::WrapFuture, RcStr, ReadRef, TaskInput, TryJoinIterExt, Value,
     ValueToString, Vc,
@@ -507,25 +507,34 @@ impl EcmascriptModuleAsset {
     }
 
     #[turbo_tasks::function]
-    pub async fn parse(&self, part: Option<Vc<ModulePart>>) -> Result<Vc<ParseResult>> {
-        let parsed = parse(self.source, Value::new(self.ty), self.transforms);
+    pub async fn split(self: Vc<Self>) -> Result<Vc<SplitResult>> {
+        let this = self.await?;
+        let parsed = parse(this.source, Value::new(this.ty), this.transforms);
+
+        Ok(split(
+            this.source.ident(),
+            this.source,
+            parsed,
+            this.options.await?.special_exports,
+        ))
+    }
+
+    #[turbo_tasks::function]
+    pub async fn parse(self: Vc<Self>, part: Option<Vc<ModulePart>>) -> Result<Vc<ParseResult>> {
+        let this = self.await?;
+        let parsed = parse(this.source, Value::new(this.ty), this.transforms);
 
         let parsed = if let Some(part) = part {
-            let split_data = split(
-                self.source.ident(),
-                self.source,
-                parsed,
-                self.options.await?.special_exports,
-            );
+            let split_data = self.split();
             part_of_module(split_data, part)
         } else {
             parsed
         };
 
         Ok(apply_transforms(
-            self.source,
+            this.source,
             parsed,
-            self.fragment_transforms,
+            this.fragment_transforms,
         ))
     }
 

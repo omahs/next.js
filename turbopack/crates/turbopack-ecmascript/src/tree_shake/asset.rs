@@ -12,9 +12,7 @@ use turbopack_core::{
     resolve::ModulePart,
 };
 
-use super::{
-    chunk_item::EcmascriptModulePartChunkItem, get_part_id, split_module, Key, SplitResult,
-};
+use super::{chunk_item::EcmascriptModulePartChunkItem, get_part_id, Key, SplitResult};
 use crate::{
     chunk::{EcmascriptChunkPlaceable, EcmascriptExports},
     parse::ParseResult,
@@ -127,7 +125,7 @@ impl Module for EcmascriptModulePartAsset {
     #[turbo_tasks::function]
     async fn ident(&self) -> Result<Vc<AssetIdent>> {
         let inner = self.full_module.ident();
-        let result = split_module(self.full_module);
+        let result = self.full_module.split();
 
         match &*result.await? {
             SplitResult::Ok { .. } => Ok(inner.with_part(self.part)),
@@ -137,7 +135,7 @@ impl Module for EcmascriptModulePartAsset {
 
     #[turbo_tasks::function]
     async fn references(&self) -> Result<Vc<ModuleReferences>> {
-        let split_data = split_module(self.full_module).await?;
+        let split_data = self.full_module.split().await?;
 
         let analyze = analyze(self.full_module, self.part, None).await?;
 
