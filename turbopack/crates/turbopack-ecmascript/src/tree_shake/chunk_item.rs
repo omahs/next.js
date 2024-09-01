@@ -7,7 +7,7 @@ use turbopack_core::{
     reference::ModuleReferences,
 };
 
-use super::{asset::EcmascriptModulePartAsset, part_of_module, split_module};
+use super::asset::EcmascriptModulePartAsset;
 use crate::{
     chunk::{EcmascriptChunkItem, EcmascriptChunkItemContent, EcmascriptChunkType},
     EcmascriptModuleContent,
@@ -38,8 +38,7 @@ impl EcmascriptChunkItem for EcmascriptModulePartChunkItem {
         let this = self.await?;
         let module = this.module.await?;
 
-        let split_data = split_module(module.full_module);
-        let parsed = part_of_module(split_data, module.part);
+        let parsed = module.full_module.parse(Some(module.part));
 
         let analyze = this.module.analyze().await?;
         let async_module_options = analyze.async_module.module_options(async_module_info);
