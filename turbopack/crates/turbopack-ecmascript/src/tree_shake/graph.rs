@@ -591,28 +591,34 @@ impl DepGraph {
                         }
 
                         for (si, s) in item.specifiers.iter().enumerate() {
-                            let (orig, mut local, exported) = match s {
+                            let (orig, local, exported) = match s {
                                 ExportSpecifier::Named(s) => (
-                                    Some(ModuleExportName::Ident(
-                                        quote_ident!(may_escape(s.orig.atom())).into(),
-                                    )),
+                                    Some(s.orig.clone()),
                                     match &s.orig {
                                         ModuleExportName::Ident(i) => {
-                                            quote_ident!(may_escape(&i.sym)).into()
+                                            Ident::new(may_escape(&i.sym).into(), i.span, i.ctxt)
                                         }
                                         ModuleExportName::Str(..) => quote_ident!("_tmp").into(),
                                     },
                                     s.exported.clone().unwrap_or_else(|| s.orig.clone()),
                                 ),
-                                ExportSpecifier::Default(s) => (
-                                    Some(ModuleExportName::Ident(Ident::new(
-                                        "_default".into(),
+                                ExportSpecifier::Default(s) => {
+                                    let ident = Ident::new_private(
+                                        magic_identifier::mangle("default export").into(),
                                         DUMMY_SP,
-                                        Default::default(),
-                                    ))),
-                                    quote_ident!("_default").into(),
-                                    ModuleExportName::Ident(s.exported.clone()),
-                                ),
+                                    );
+
+                                    (
+                                        Some(ModuleExportName::Ident(
+                                            quote_ident!("default").into(),
+                                        )),
+                                        ident,
+                                        ModuleExportName::Ident(Ident::new_no_ctxt(
+                                            may_escape(&s.exported.sym).into(),
+                                            DUMMY_SP,
+                                        )),
+                                    )
+                                }
                                 ExportSpecifier::Namespace(s) => (
                                     None,
                                     match &s.name {
@@ -622,13 +628,6 @@ impl DepGraph {
                                     s.name.clone(),
                                 ),
                             };
-
-                            if item.src.is_some() {
-                                local.sym =
-                                    magic_identifier::mangle(&format!("reexport {}", local.sym))
-                                        .into();
-                                local = local.into_private();
-                            }
 
                             exports.push((local.to_id(), exported.atom().clone()));
 
@@ -1131,7 +1130,14 @@ impl DepGraph {
                             specifiers: vec![ExportSpecifier::Named(ExportNamedSpecifier {
                                 span: DUMMY_SP,
                                 orig: ModuleExportName::Ident(local.clone().into()),
-                                exported: None,
+                                exported: if local.0 == export_name {
+                                    None
+                                } else {
+                                    Some(ModuleExportName::Ident(Ident::new_no_ctxt(
+                                        export_name.clone(),
+                                        DUMMY_SP,
+                                    )))
+                                },
                                 is_type_only: false,
                             })],
                             src: None,

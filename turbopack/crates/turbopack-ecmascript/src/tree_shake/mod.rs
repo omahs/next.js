@@ -441,6 +441,7 @@ pub(super) async fn split_module(asset: Vc<EcmascriptModuleAsset>) -> Result<Vc<
         asset.source().ident(),
         asset.source(),
         asset.parse(None),
+        asset.options().await?.special_exports,
     ))
 }
 
@@ -449,6 +450,7 @@ pub(super) async fn split(
     ident: Vc<AssetIdent>,
     source: Vc<Box<dyn Source>>,
     parsed: Vc<ParseResult>,
+    special_exports: Vc<Vec<RcStr>>,
 ) -> Result<Vc<SplitResult>> {
     if ident.await?.part.is_some() {
         return Ok(SplitResult::Failed {
@@ -470,7 +472,7 @@ pub(super) async fn split(
             ..
         } => {
             // If the script file is a common js file, we cannot split the module
-            if util::should_skip_tree_shaking(program) {
+            if util::should_skip_tree_shaking(program, &special_exports.await?) {
                 return Ok(SplitResult::Failed {
                     parse_result: parsed,
                 }
@@ -673,85 +675,6 @@ pub(crate) async fn part_of_module(
                         None,
                     );
 
-                    return Ok(ParseResult::Ok {
-                        program,
-                        comments: comments.clone(),
-                        eval_context,
-                        globals: globals.clone(),
-                        source_map: source_map.clone(),
-                        top_level_mark: *top_level_mark,
-                    }
-                    .cell());
-                } else {
-                    unreachable!()
-                }
-            }
-
-            if matches!(&*part.await?, ModulePart::Exports) {
-                if let ParseResult::Ok {
-                    comments,
-                    eval_context,
-                    globals,
-                    source_map,
-                    top_level_mark,
-                    ..
-                } = &*modules[0].await?
-                {
-                    let mut export_names = entrypoints
-                        .keys()
-                        .filter_map(|key| {
-                            if let Key::Export(v) = key {
-                                Some(v.clone())
-                            } else {
-                                None
-                            }
-                        })
-                        .collect::<Vec<_>>();
-                    export_names.sort();
-
-                    let mut module = Module::dummy();
-
-                    for export_name in export_names {
-                        // We can't use quote! as `with` is not standard yet
-                        let chunk_prop =
-                            create_turbopack_part_id_assert(PartId::Export(export_name.clone()));
-
-                        let specifier =
-                            swc_core::ecma::ast::ExportSpecifier::Named(ExportNamedSpecifier {
-                                span: DUMMY_SP,
-                                orig: ModuleExportName::Ident(Ident::new(
-                                    export_name.as_str().into(),
-                                    DUMMY_SP,
-                                    Default::default(),
-                                )),
-                                exported: None,
-                                is_type_only: false,
-                            });
-                        module
-                            .body
-                            .push(ModuleItem::ModuleDecl(ModuleDecl::ExportNamed(
-                                NamedExport {
-                                    span: DUMMY_SP,
-                                    specifiers: vec![specifier],
-                                    src: Some(Box::new(TURBOPACK_PART_IMPORT_SOURCE.into())),
-                                    type_only: false,
-                                    with: Some(Box::new(chunk_prop)),
-                                },
-                            )));
-                    }
-
-                    module.body.extend(star_reexports.iter().map(|export_all| {
-                        ModuleItem::ModuleDecl(ModuleDecl::ExportAll(export_all.clone()))
-                    }));
-
-                    let program = Program::Module(module);
-                    let eval_context = EvalContext::new(
-                        &program,
-                        eval_context.unresolved_mark,
-                        eval_context.top_level_mark,
-                        None,
-                        None,
-                    );
                     return Ok(ParseResult::Ok {
                         program,
                         comments: comments.clone(),

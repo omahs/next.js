@@ -158,6 +158,11 @@ pub struct EcmascriptOptions {
     /// If false, they will reference the whole directory. If true, they won't
     /// reference anything and lead to an runtime error instead.
     pub ignore_dynamic_requests: bool,
+
+    /// The list of export names that should make tree shaking bail off. This is
+    /// required because tree shaking can split imports like `export const
+    /// runtime = 'edge'` as a separate module.
+    pub special_exports: Vc<Vec<RcStr>>,
 }
 
 #[turbo_tasks::value(serialization = "auto_for_input")]
@@ -502,17 +507,26 @@ impl EcmascriptModuleAsset {
     }
 
     #[turbo_tasks::function]
-    pub fn parse(&self, part: Option<Vc<ModulePart>>) -> Vc<ParseResult> {
+    pub async fn parse(&self, part: Option<Vc<ModulePart>>) -> Result<Vc<ParseResult>> {
         let parsed = parse(self.source, Value::new(self.ty), self.transforms);
 
         let parsed = if let Some(part) = part {
-            let split_data = split(self.source.ident(), self.source, parsed);
+            let split_data = split(
+                self.source.ident(),
+                self.source,
+                parsed,
+                self.options.await?.special_exports,
+            );
             part_of_module(split_data, part)
         } else {
             parsed
         };
 
-        apply_transforms(self.source, parsed, self.fragment_transforms)
+        Ok(apply_transforms(
+            self.source,
+            parsed,
+            self.fragment_transforms,
+        ))
     }
 
     #[turbo_tasks::function]
