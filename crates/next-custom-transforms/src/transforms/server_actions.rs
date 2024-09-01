@@ -813,6 +813,10 @@ impl<C: Comments> VisitMut for ServerActions<C> {
                         }
                     }
                     ModuleItem::ModuleDecl(ModuleDecl::ExportNamed(named)) => {
+                        if named.with.as_deref().map_or(false, is_turbopack_var_export) {
+                            continue;
+                        }
+
                         if named.src.is_some() {
                             disallowed_export_span = named.span;
                         } else {
@@ -1221,6 +1225,23 @@ impl<C: Comments> VisitMut for ServerActions<C> {
     }
 
     noop_visit_mut_type!();
+}
+
+fn is_turbopack_var_export(with: &ObjectLit) -> bool {
+    for prop in with.props.iter() {
+        if let PropOrSpread::Prop(prop) = prop {
+            if let Prop::KeyValue(KeyValueProp {
+                key: PropName::Ident(key),
+                ..
+            }) = &**prop
+            {
+                if key.sym == "__turbopack_var__" {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
 
 fn retain_names_from_declared_idents(child_names: &mut Vec<Name>, current_declared_idents: &[Id]) {
