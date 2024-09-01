@@ -258,6 +258,7 @@ impl DepGraph {
             .collect();
         let mut modules = vec![];
         let mut exports_module = Module::dummy();
+        exports_module.body.extend(directives.iter().cloned());
 
         if groups.graph_ix.is_empty() {
             // If there's no dependency, all nodes are in the module evaluaiotn group.
