@@ -818,6 +818,7 @@ impl<C: Comments> VisitMut for ServerActions<C> {
                             .as_deref()
                             .map_or(false, is_turbopack_fake_export)
                         {
+                            new.push(stmt);
                             continue;
                         }
 
