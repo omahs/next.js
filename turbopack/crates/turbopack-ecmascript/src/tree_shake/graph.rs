@@ -419,6 +419,14 @@ impl DepGraph {
             }
 
             for g in group {
+                // Skip directives
+                if let ModuleItem::Stmt(Stmt::Expr(ExprStmt {
+                    expr: box Expr::Lit(Lit::Str(_)),
+                    ..
+                })) = &data[g].content
+                {
+                    continue;
+                }
                 chunk.body.push(data[g].content.clone());
             }
 
