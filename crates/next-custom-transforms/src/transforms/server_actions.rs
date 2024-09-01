@@ -813,7 +813,11 @@ impl<C: Comments> VisitMut for ServerActions<C> {
                         }
                     }
                     ModuleItem::ModuleDecl(ModuleDecl::ExportNamed(named)) => {
-                        if named.with.as_deref().map_or(false, is_turbopack_var_export) {
+                        if named
+                            .with
+                            .as_deref()
+                            .map_or(false, is_turbopack_fake_export)
+                        {
                             continue;
                         }
 
@@ -1227,7 +1231,7 @@ impl<C: Comments> VisitMut for ServerActions<C> {
     noop_visit_mut_type!();
 }
 
-fn is_turbopack_var_export(with: &ObjectLit) -> bool {
+fn is_turbopack_fake_export(with: &ObjectLit) -> bool {
     for prop in with.props.iter() {
         if let PropOrSpread::Prop(prop) = prop {
             if let Prop::KeyValue(KeyValueProp {
@@ -1235,7 +1239,7 @@ fn is_turbopack_var_export(with: &ObjectLit) -> bool {
                 ..
             }) = &**prop
             {
-                if key.sym == "__turbopack_var__" {
+                if key.sym == "__turbopack_var__" || key.sym == "__turbopack_part__" {
                     return true;
                 }
             }
