@@ -5,6 +5,7 @@ use std::{
 };
 
 use hex::encode as hex_encode;
+use rustc_hash::FxHashSet;
 use serde::Deserialize;
 use sha1::{Digest, Sha1};
 use swc_core::{
@@ -68,6 +69,8 @@ pub fn server_actions<C: Comments>(
         annotations: Default::default(),
         extra_items: Default::default(),
         export_actions: Default::default(),
+
+        excluded_exports: Default::default(),
     })
 }
 
@@ -111,6 +114,8 @@ struct ServerActions<C: Comments> {
     annotations: Vec<Stmt>,
     extra_items: Vec<ModuleItem>,
     export_actions: Vec<String>,
+
+    excluded_exports: FxHashSet<Id>,
 }
 
 impl<C: Comments> ServerActions<C> {
@@ -772,6 +777,15 @@ impl<C: Comments> VisitMut for ServerActions<C> {
             self.config.enabled,
         );
 
+        for stmt in stmts.iter() {
+            if let ModuleItem::ModuleDecl(ModuleDecl::Import(i)) = stmt {
+                if i.with.as_deref().map_or(false, is_turbopack_fake_export) {
+                    self.excluded_exports
+                        .extend(i.specifiers.iter().map(|s| s.local().to_id()));
+                }
+            }
+        }
+
         let old_annotations = self.annotations.take();
         let mut new = Vec::with_capacity(stmts.len());
 
@@ -818,6 +832,31 @@ impl<C: Comments> VisitMut for ServerActions<C> {
                             .as_deref()
                             .map_or(false, is_turbopack_fake_export)
                         {
+                            new.push(stmt);
+                            continue;
+                        }
+
+                        // Skip exports that are excluded.
+                        // This logic handles the fake exports like below.
+                        //
+                        //
+                        // import { foo } from '__TURBOPACK_PART__' with {
+                        //      __turbopack_part__: 1,
+                        // }
+                        //
+                        // export { foo }
+                        //
+                        if named.specifiers.iter().any(|s| {
+                            if let ExportSpecifier::Named(ExportNamedSpecifier {
+                                orig: ModuleExportName::Ident(ident),
+                                ..
+                            }) = s
+                            {
+                                self.excluded_exports.contains(&ident.to_id())
+                            } else {
+                                false
+                            }
+                        }) {
                             new.push(stmt);
                             continue;
                         }
