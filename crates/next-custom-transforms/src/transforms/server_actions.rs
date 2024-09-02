@@ -1237,10 +1237,20 @@ fn is_turbopack_fake_export(with: &ObjectLit) -> bool {
         if let PropOrSpread::Prop(prop) = prop {
             if let Prop::KeyValue(KeyValueProp {
                 key: PropName::Ident(key),
+                value,
                 ..
             }) = &**prop
             {
-                if key.sym == "__turbopack_var__" || key.sym == "__turbopack_part__" {
+                if key.sym == "__turbopack_var__" {
+                    return true;
+                }
+
+                if key.sym == "__turbopack_part__" {
+                    if let Expr::Lit(Lit::Str(Str { value, .. })) = &**value {
+                        if value.starts_with("export ") {
+                            return false;
+                        }
+                    }
                     return true;
                 }
             }
